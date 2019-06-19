@@ -6,13 +6,13 @@ namespace PinPadLib.Raw
     {
         private readonly bool isInterruption;
         private readonly byte[] data;
-        private readonly RequestInterruption interruption;
+        private readonly ResponseInterruption interruption;
 
-        public RawResponseMessage(RequestInterruption interruption)
+        public RawResponseMessage(ResponseInterruption interruption)
         {
             this.isInterruption = true;
             this.interruption = interruption;
-            if (!Enum.IsDefined(typeof(RequestInterruption), interruption))
+            if (!Enum.IsDefined(typeof(ResponseInterruption), interruption))
                 throw new ArgumentException("Invalid interrupt", nameof(interruption));
         }
 
@@ -22,7 +22,23 @@ namespace PinPadLib.Raw
             this.data = bytes ?? throw new ArgumentNullException(nameof(bytes));
         }
 
-        public void Match(Action<RequestInterruption> whenIsInterruption, Action<byte[]> whenIsData)
+        public T Match<T>(Func<ResponseInterruption, T> whenIsInterruption, Func<byte[], T> whenIsData)
+        {
+            if (whenIsInterruption == null)
+                throw new ArgumentNullException(nameof(whenIsInterruption));
+            if (whenIsData == null)
+                throw new ArgumentNullException(nameof(whenIsData));
+
+            if (this.isInterruption)
+            {
+                return whenIsInterruption(this.interruption);
+            }
+            else
+            {
+                return whenIsData(this.data);
+            }
+        }
+        public void Do(Action<ResponseInterruption> whenIsInterruption, Action<byte[]> whenIsData)
         {
             if (this.isInterruption)
             {
@@ -32,6 +48,15 @@ namespace PinPadLib.Raw
             {
                 whenIsData?.Invoke(this.data);
             }
+        }
+
+        public static implicit operator RawResponseMessage(ResponseInterruption interruption)
+        {
+            return new RawResponseMessage(interruption);
+        }
+        public static implicit operator RawResponseMessage(byte[] data)
+        {
+            return new RawResponseMessage(data);
         }
     }
 }

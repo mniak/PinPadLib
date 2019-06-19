@@ -22,7 +22,23 @@ namespace PinPadLib.Raw
             this.data = bytes ?? throw new ArgumentNullException(nameof(bytes));
         }
 
-        public void Match(Action<RequestInterruption> whenIsInterruption, Action<byte[]> whenIsData)
+        public T Match<T>(Func<RequestInterruption, T> whenIsInterruption, Func<byte[], T> whenIsData)
+        {
+            if (whenIsInterruption == null)
+                throw new ArgumentNullException(nameof(whenIsInterruption));
+            if (whenIsData == null)
+                throw new ArgumentNullException(nameof(whenIsData));
+
+            if (this.isInterruption)
+            {
+                return whenIsInterruption(this.interruption);
+            }
+            else
+            {
+                return whenIsData(this.data);
+            }
+        }
+        public void Do<T>(Action<RequestInterruption> whenIsInterruption, Action<byte[]> whenIsData)
         {
             if (this.isInterruption)
             {
@@ -32,6 +48,15 @@ namespace PinPadLib.Raw
             {
                 whenIsData?.Invoke(this.data);
             }
+        }
+
+        public static implicit operator RawRequestMessage(RequestInterruption interruption)
+        {
+            return new RawRequestMessage(interruption);
+        }
+        public static implicit operator RawRequestMessage(byte[] data)
+        {
+            return new RawRequestMessage(data);
         }
     }
 }
