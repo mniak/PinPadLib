@@ -1,8 +1,9 @@
 using System;
 
-namespace PinPadLib
+namespace PinPadLib.HighLevel
 {
     public interface IPinPad : IDisposable
     {
+        Gert
     }
 }

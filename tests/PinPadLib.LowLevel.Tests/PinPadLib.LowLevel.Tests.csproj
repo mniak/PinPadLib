@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PinPadLib\PinPadLib.csproj" />
+    <ProjectReference Include="..\..\src\PinPadLib\PinPadLib.csproj" />
   </ItemGroup>
 
 </Project>
