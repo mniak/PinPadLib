@@ -2,7 +2,7 @@ using AutoFixture;
 using AutoFixture.AutoMoq;
 using AutoFixture.Xunit2;
 
-namespace PinPadLib.UnitTests
+namespace PinPadLib.HighLevel.UnitTests._Infra
 {
     public class AutoMoqDataAttribute : AutoDataAttribute
     {

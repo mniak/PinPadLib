@@ -7,7 +7,7 @@
 //using System.Threading.Tasks;
 //using Xunit;
 
-//namespace PinPadLib.UnitTests.HighLevel.Commands
+//namespace PinPadLib.HighLevel.UnitTests.HighLevel
 //{
 //    public class PinPadOverProtocolTest
 //    {
