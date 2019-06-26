@@ -49,7 +49,6 @@ namespace PinPadLib.Serial
             return ResponseInterruption.InvalidMessage;
         }
 
-
         private const byte ByteSyn = 0x16;
         private const byte ByteEtb = 0x17;
         private const byte ByteCan = 0x18;

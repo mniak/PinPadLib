@@ -10,7 +10,7 @@ namespace PinPadLib.Raw.UnitTests
     public class PipeMessageReaderTest
     {
         [Fact]
-        public async Task TestMessageOpn000()
+        public async Task WhenReceiveWellFormattedMessage_ShouldReturnData()
         {
             var bytes = new ByteArrayBuilder();
             bytes.Add(Bytes.SYN);
@@ -29,9 +29,8 @@ namespace PinPadLib.Raw.UnitTests
             data.ShouldBeInAscii("OPN000");
         }
 
-
         [Fact]
-        public async Task TestMessageOpn000_WithCanInTheBeginning()
+        public async Task WhenReceiveWellFormattedMessage_WithCANInTheBeginning_ShouldReturnData()
         {
             var bytes = new ByteArrayBuilder();
             bytes.Add(Bytes.CAN);
@@ -52,7 +51,7 @@ namespace PinPadLib.Raw.UnitTests
         }
 
         [Fact]
-        public async Task TestMessageOpn000_WithCanInTheMiddle()
+        public async Task WhenReceiveWellFormattedMessage_WithCANInTheMiddle_ShouldReturnData()
         {
             var bytes = new ByteArrayBuilder();
             bytes.Add(Bytes.SYN);
@@ -74,16 +73,77 @@ namespace PinPadLib.Raw.UnitTests
             data.ShouldBeInAscii("OPN000");
         }
 
-
         [Fact]
-        public async Task TestMessageOpn000_WithWrongCrc()
+        public async Task WhenReceiveWrongCRC_ShouldReturnInterruptionInvalidCrc()
         {
             var bytes = new ByteArrayBuilder();
             bytes.Add(Bytes.SYN);
-            bytes.Add("OPN000");
+            bytes.Add("ABCDEFG");
             bytes.Add(Bytes.ETB);
-            bytes.Add(0x88, 0xee);
+            bytes.Add(0x11, 0x22);
 
+            var pipe = new Pipe();
+            await pipe.Writer.WriteAsync(bytes.ToArray());
+
+            var sut = new PipeMessageReader(pipe.Reader);
+            var msg = await sut.ReadMessageAsync();
+
+            var @int = msg.ShouldBeInterruption();
+            @int.ShouldBe(ResponseInterruption.InvalidCrc);
+        }
+
+        [Fact]
+        public async Task WhenReceiveMessage_WithByteOutOfRange_ShouldReturnInterruptInvalidMessage()
+        {
+            var bytes = new ByteArrayBuilder();
+            bytes.Add(Bytes.SYN);
+            bytes.Add("ABCD");
+            bytes.Add(0x80); // Byte out of range
+            bytes.Add("EFGH");
+            bytes.Add(Bytes.ETB);
+            bytes.Add(0x11, 0x22);
+
+            var pipe = new Pipe();
+            await pipe.Writer.WriteAsync(bytes.ToArray());
+
+            var sut = new PipeMessageReader(pipe.Reader);
+            var msg = await sut.ReadMessageAsync();
+
+            var @int = msg.ShouldBeInterruption();
+            @int.ShouldBe(ResponseInterruption.InvalidMessage);
+        }
+
+        [Fact]
+        public async Task WhenReceiveMessage_WithLengthGreaterThan1024_ShouldReturnInterruptInvalidMessage()
+        {
+            var bytes = new ByteArrayBuilder();
+            bytes.Add(Bytes.SYN);
+            bytes.Add(new string('a', 1025));
+            bytes.Add(Bytes.ETB);
+            bytes.Add(0x11, 0x22);
+            var pipe = new Pipe();
+            await pipe.Writer.WriteAsync(bytes.ToArray());
+
+            var sut = new PipeMessageReader(pipe.Reader);
+            var msg = await sut.ReadMessageAsync();
+
+            var @int = msg.ShouldBeInterruption();
+            @int.ShouldBe(ResponseInterruption.InvalidMessage);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(10)]
+        [InlineData(102)]
+        [InlineData(1024)]
+        public async Task WhenReceiveMessage_WithLengthAtMost1024_ShouldReturnInterruptInvalidCrcNotInvalidMessage(int length)
+        {
+            var bytes = new ByteArrayBuilder();
+            bytes.Add(Bytes.SYN);
+            bytes.Add(new string('a', length));
+            bytes.Add(Bytes.ETB);
+            bytes.Add(0x11, 0x22);
             var pipe = new Pipe();
             await pipe.Writer.WriteAsync(bytes.ToArray());
 
