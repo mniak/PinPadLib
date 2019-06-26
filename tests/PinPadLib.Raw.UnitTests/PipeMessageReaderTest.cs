@@ -92,13 +92,19 @@ namespace PinPadLib.Raw.UnitTests
             @int.ShouldBe(ResponseInterruption.InvalidCrc);
         }
 
-        [Fact]
-        public async Task WhenReceiveMessage_WithByteOutOfRange_ShouldReturnInterruptInvalidMessage()
+        [Theory]
+        [InlineData(0x00)]
+        [InlineData(0x11)]
+        [InlineData(0x19)]
+        [InlineData(0x90)]
+        [InlineData(0xA0)]
+        [InlineData(0xF0)]
+        public async Task WhenReceiveMessage_WithByteOutOfRange_ShouldReturnInterruptInvalidMessage(byte byteOutOfRange)
         {
             var bytes = new ByteArrayBuilder();
             bytes.Add(Bytes.SYN);
             bytes.Add("ABCD");
-            bytes.Add(0x80); // Byte out of range
+            bytes.Add(byteOutOfRange);
             bytes.Add("EFGH");
             bytes.Add(Bytes.ETB);
             bytes.Add(0x11, 0x22);
