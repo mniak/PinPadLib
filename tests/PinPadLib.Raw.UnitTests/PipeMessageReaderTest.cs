@@ -9,14 +9,16 @@ namespace PinPadLib.Raw.UnitTests
 {
     public class PipeMessageReaderTest
     {
-        [Fact]
-        public async Task WhenReceiveWellFormattedMessage_ShouldReturnData()
+        [Theory]
+        [InlineData("OPN000", 0x77, 0x5e)]
+        [InlineData("AAAAAAAA", 0x9a, 0x63)]
+        public async Task WhenReceiveWellFormattedMessage_ShouldReturnData(string payload, byte crcByte1, byte crcByte2)
         {
             var bytes = new ByteArrayBuilder();
             bytes.Add(Bytes.SYN);
-            bytes.Add("OPN000");
+            bytes.Add(payload);
             bytes.Add(Bytes.ETB);
-            bytes.Add(0x77, 0x5e);
+            bytes.Add(crcByte1, crcByte2);
 
             var pipe = new Pipe();
             await pipe.Writer.WriteAsync(bytes.ToArray());
@@ -25,19 +27,21 @@ namespace PinPadLib.Raw.UnitTests
             var msg = await sut.ReadMessageAsync();
 
             var data = msg.ShouldBeData();
-            data.Length.ShouldBe(6);
-            data.ShouldBeInAscii("OPN000");
+            data.Length.ShouldBe(payload.Length);
+            data.ShouldBeInAscii(payload);
         }
 
-        [Fact]
-        public async Task WhenReceiveWellFormattedMessage_WithCANInTheBeginning_ShouldReturnData()
+        [Theory]
+        [InlineData("OPN000", 0x77, 0x5e)]
+        [InlineData("AAAAAAAA", 0x9a, 0x63)]
+        public async Task WhenReceiveWellFormattedMessage_WithCANInTheBeginning_ShouldReturnData(string payload, byte crcByte1, byte crcByte2)
         {
             var bytes = new ByteArrayBuilder();
             bytes.Add(Bytes.CAN);
             bytes.Add(Bytes.SYN);
-            bytes.Add("OPN000");
+            bytes.Add(payload);
             bytes.Add(Bytes.ETB);
-            bytes.Add(0x77, 0x5e);
+            bytes.Add(crcByte1, crcByte2);
 
             var pipe = new Pipe();
             await pipe.Writer.WriteAsync(bytes.ToArray());
@@ -46,21 +50,23 @@ namespace PinPadLib.Raw.UnitTests
             var msg = await sut.ReadMessageAsync();
 
             var data = msg.ShouldBeData();
-            data.Length.ShouldBe(6);
-            data.ShouldBeInAscii("OPN000");
+            data.Length.ShouldBe(payload.Length);
+            data.ShouldBeInAscii(payload);
         }
 
-        [Fact]
-        public async Task WhenReceiveWellFormattedMessage_WithCANInTheMiddle_ShouldReturnData()
+        [Theory]
+        [InlineData("OPN000", 0x77, 0x5e)]
+        [InlineData("AAAAAAAA", 0x9a, 0x63)]
+        public async Task WhenReceiveWellFormattedMessage_WithCANInTheMiddle_ShouldReturnData(string payload, byte crcByte1, byte crcByte2)
         {
             var bytes = new ByteArrayBuilder();
             bytes.Add(Bytes.SYN);
             bytes.Add("ABCDEFG");
             bytes.Add(Bytes.CAN);
             bytes.Add(Bytes.SYN);
-            bytes.Add("OPN000");
+            bytes.Add(payload);
             bytes.Add(Bytes.ETB);
-            bytes.Add(0x77, 0x5e);
+            bytes.Add(crcByte1, crcByte2);
 
             var pipe = new Pipe();
             await pipe.Writer.WriteAsync(bytes.ToArray());
@@ -69,8 +75,8 @@ namespace PinPadLib.Raw.UnitTests
             var msg = await sut.ReadMessageAsync();
 
             var data = msg.ShouldBeData();
-            data.Length.ShouldBe(6);
-            data.ShouldBeInAscii("OPN000");
+            data.Length.ShouldBe(payload.Length);
+            data.ShouldBeInAscii(payload);
         }
 
         [Fact]
