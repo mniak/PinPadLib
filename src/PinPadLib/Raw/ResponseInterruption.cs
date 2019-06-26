@@ -5,5 +5,6 @@ namespace PinPadLib.Raw
         Aborted,
         CommunicationError,
         InvalidMessage,
+        InvalidCrc,
     }
 }

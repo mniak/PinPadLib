@@ -1,4 +1,5 @@
 ﻿using PinPadLib.Raw;
+using PinPadLib.Utils;
 using System;
 using System.Buffers;
 using System.IO.Pipelines;
@@ -23,8 +24,18 @@ namespace PinPadLib.Serial
             {
                 try
                 {
-                    await ReadSyn();
-                    var payload = ReadPayload();
+                    await ReadSynAsync();
+                    var payload = await ReadPayloadAsync();
+                    var crc = await ReadCrcAsync();
+                    var crcIsValid = ValidateCrc(payload, crc);
+                    if (crcIsValid)
+                    {
+                        return payload;
+                    }
+                    else
+                    {
+                        return ResponseInterruption.InvalidCrc;
+                    }
                 }
                 catch (InvalidMessageException)
                 {
@@ -38,11 +49,13 @@ namespace PinPadLib.Serial
             return ResponseInterruption.InvalidMessage;
         }
 
+
         private const byte ByteSyn = 0x16;
         private const byte ByteEtb = 0x17;
         private const byte ByteCan = 0x18;
         private const int MaxLength = 1024;
-        private async Task ReadSyn()
+
+        private async Task ReadSynAsync()
         {
             var result = await this.reader.ReadAsync(new CancellationTokenSource(DelayMs).Token);
             ThrowIfHasCan(result);
@@ -52,8 +65,7 @@ namespace PinPadLib.Serial
             if (b0 != ByteSyn)
                 throw new InvalidMessageException();
         }
-
-        private async Task<byte[]> ReadPayload()
+        private async Task<byte[]> ReadPayloadAsync()
         {
             ReadResult result;
             do
@@ -64,6 +76,8 @@ namespace PinPadLib.Serial
                 var etbPos = result.Buffer.PositionOf(ByteEtb);
                 if (etbPos.HasValue)
                 {
+                    this.reader.AdvanceTo(result.Buffer.GetPosition(1, etbPos.Value));
+
                     var slice = result.Buffer.Slice(0, etbPos.Value);
                     if (slice.Length > MaxLength)
                         break;
@@ -72,7 +86,7 @@ namespace PinPadLib.Serial
                     if (buffer.Any(b => b < 0x20 || b > 0x7f))
                         break;
 
-
+                    return buffer;
                 }
                 else
                 {
@@ -83,13 +97,41 @@ namespace PinPadLib.Serial
             } while (!result.IsCanceled && !result.IsCompleted);
             throw new InvalidMessageException();
         }
+        private async Task<ushort> ReadCrcAsync()
+        {
+            ReadResult result;
+            do
+            {
+                result = await this.reader.ReadAsync(new CancellationTokenSource(DelayMs).Token);
+                ThrowIfHasCan(result);
+                if (result.Buffer.Length >= 2)
+                {
+                    var slice = result.Buffer.Slice(0, 2);
+                    this.reader.AdvanceTo(slice.End);
+                    var bytes = slice.ToArray();
+                    return (ushort)(bytes[0] * 256 + bytes[1]);
+                }
+                else
+                {
+                    this.reader.AdvanceTo(result.Buffer.Start, result.Buffer.End);
+                }
+            } while (!result.IsCanceled && !result.IsCompleted);
+            throw new InvalidMessageException();
+        }
+
+        private bool ValidateCrc(byte[] payload, ushort crc)
+        {
+            var payloadWithEtb = payload.Concat(new byte[] { ByteEtb }).ToArray();
+            var computedCrc = Crc16.Compute(payloadWithEtb);
+            return computedCrc == crc;
+        }
 
         private void ThrowIfHasCan(ReadResult result)
         {
             var canPos = result.Buffer.PositionOf(ByteCan);
             if (canPos.HasValue)
             {
-                this.reader.AdvanceTo(canPos.Value);
+                this.reader.AdvanceTo(result.Buffer.GetPosition(1, canPos.Value));
                 throw new AbortedException();
             }
         }

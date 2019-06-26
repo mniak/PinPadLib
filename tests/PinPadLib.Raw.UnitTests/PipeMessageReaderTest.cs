@@ -2,7 +2,6 @@ using PinPadLib.Raw.UnitTests._Infra;
 using PinPadLib.Serial;
 using Shouldly;
 using System.IO.Pipelines;
-using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -14,7 +13,6 @@ namespace PinPadLib.Raw.UnitTests
         public async Task TestMessageOpn000()
         {
             var bytes = new ByteArrayBuilder();
-            //bytes.Add(Ascii.ACK);
             bytes.Add(Bytes.SYN);
             bytes.Add("OPN000");
             bytes.Add(Bytes.ETB);
@@ -26,12 +24,52 @@ namespace PinPadLib.Raw.UnitTests
             var sut = new PipeMessageReader(pipe.Reader);
             var msg = await sut.ReadMessageAsync();
 
-            msg.Match(intr => false, data => true).ShouldBe(true, "Should return data");
-            msg.Do(_ => { }, data =>
-            {
-                data.Length.ShouldBe(6);
-                Encoding.ASCII.GetString(data).ShouldBe("OPN000");
-            });
+            var data = msg.ShouldBeData();
+            data.Length.ShouldBe(6);
+            data.ShouldBeInAscii("OPN000");
+        }
+
+        [Fact]
+        public async Task TestMessageOpn000_WithCanInTheMiddle()
+        {
+            var bytes = new ByteArrayBuilder();
+            bytes.Add(Bytes.SYN);
+            bytes.Add("ABCDEFG");
+            bytes.Add(Bytes.CAN);
+            bytes.Add(Bytes.SYN);
+            bytes.Add("OPN000");
+            bytes.Add(Bytes.ETB);
+            bytes.Add(0x77, 0x5e);
+
+            var pipe = new Pipe();
+            await pipe.Writer.WriteAsync(bytes.ToArray());
+
+            var sut = new PipeMessageReader(pipe.Reader);
+            var msg = await sut.ReadMessageAsync();
+
+            var data = msg.ShouldBeData();
+            data.Length.ShouldBe(6);
+            data.ShouldBeInAscii("OPN000");
+        }
+
+
+        [Fact]
+        public async Task TestMessageOpn000_WithWrongCrc()
+        {
+            var bytes = new ByteArrayBuilder();
+            bytes.Add(Bytes.SYN);
+            bytes.Add("OPN000");
+            bytes.Add(Bytes.ETB);
+            bytes.Add(0x88, 0xee);
+
+            var pipe = new Pipe();
+            await pipe.Writer.WriteAsync(bytes.ToArray());
+
+            var sut = new PipeMessageReader(pipe.Reader);
+            var msg = await sut.ReadMessageAsync();
+
+            var @int = msg.ShouldBeInterruption();
+            @int.ShouldBe(ResponseInterruption.InvalidCrc);
         }
     }
 }
