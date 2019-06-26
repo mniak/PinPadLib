@@ -1,4 +1,3 @@
-﻿using PinPadLib.Raw;
 using PinPadLib.Utils;
 using System;
 using System.Buffers;
@@ -7,7 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PinPadLib.Serial
+namespace PinPadLib.Raw
 {
     internal class PipeMessageReader
     {

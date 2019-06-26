@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 
-namespace PinPadLib.Serial
+namespace PinPadLib.Raw
 {
     [Serializable]
     internal class AbortedException : Exception

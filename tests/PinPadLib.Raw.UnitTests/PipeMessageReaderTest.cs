@@ -1,5 +1,4 @@
 using PinPadLib.Raw.UnitTests._Infra;
-using PinPadLib.Serial;
 using Shouldly;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
