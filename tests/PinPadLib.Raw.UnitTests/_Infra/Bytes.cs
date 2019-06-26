@@ -1,4 +1,4 @@
-﻿namespace PinPadLib.Raw.UnitTests
+namespace PinPadLib.Raw.UnitTests._Infra
 {
     internal static class Bytes
     {
