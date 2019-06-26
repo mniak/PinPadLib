@@ -119,7 +119,7 @@ namespace PinPadLib.Raw
 
         private bool ValidateCrc(byte[] payload, ushort crc)
         {
-            var payloadWithEtb = payload.Concat(new byte[] { ByteEtb }).ToArray();
+            var payloadWithEtb = payload.Concat(new byte[] { ByteEtb });
             var computedCrc = Crc16.Compute(payloadWithEtb);
             return computedCrc == crc;
         }

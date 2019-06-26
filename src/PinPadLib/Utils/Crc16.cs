@@ -1,8 +1,10 @@
-﻿namespace PinPadLib.Utils
+﻿using System.Collections.Generic;
+
+namespace PinPadLib.Utils
 {
-    public static class Crc16
+    internal static class Crc16
     {
-        public static ushort Compute(byte[] data)
+        public static ushort Compute(IEnumerable<byte> data)
         {
             const ushort mask = 0x1021;
             ushort crc = 0;

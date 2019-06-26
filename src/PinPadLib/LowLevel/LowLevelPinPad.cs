@@ -1,7 +1,7 @@
 ﻿using PinPadLib.Raw;
+using PinPadLib.Utils;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace PinPadLib.LowLevel
@@ -21,13 +21,22 @@ namespace PinPadLib.LowLevel
 
         public Task SendCommandAsync(LowLevelRequestMessage message)
         {
-            var bytes = new List<byte>();
-            bytes.AddRange(Encoding.ASCII.GetBytes(message.Command.acronym));
+            var bytes = new ByteArrayBuilder()
+                .Add(Bytes.SYN)
+                .Add(message.Command.acronym);
+            if (!message.Parameters.Any())
+            {
+                message = message.With(parameters: new[] { string.Empty });
+            }
             foreach (var parameter in message.Parameters)
             {
-                bytes.AddRange(Encoding.ASCII.GetBytes(parameter.Length.ToString("000")));
-                bytes.AddRange(Encoding.ASCII.GetBytes(parameter));
+                bytes
+                    .Add(parameter.Length.ToString("000"))
+                    .Add(parameter);
             }
+            bytes.Add(Bytes.ETB);
+            var crc = Crc16.Compute(bytes.Skip(1));
+            bytes.Add((byte)(crc / 256), (byte)(crc % 256));
             return this.rawPinPad.SendRawMessageAsync(bytes.ToArray());
         }
     }

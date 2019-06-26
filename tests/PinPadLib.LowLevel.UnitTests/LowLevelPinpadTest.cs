@@ -2,6 +2,7 @@ using AutoFixture.Xunit2;
 using Moq;
 using PinPadLib.LowLevel.UnitTests._Infra;
 using PinPadLib.Raw;
+using PinPadLib.Utils;
 using Xunit;
 
 namespace PinPadLib.LowLevel.UnitTests
@@ -24,7 +25,10 @@ namespace PinPadLib.LowLevel.UnitTests
                 .Add(Bytes.ETB)
                 .Add(0x77, 0x5e)
                 .ToArray();
-            rawPinPadMock.Verify(x => x.SendRawMessageAsync(It.Is<RawRequestMessage>(msg => msg.Equals(rawMsg))), Times.Once);
+            rawPinPadMock.Verify(x => x.SendRawMessageAsync(It.IsAny<RawRequestMessage>()), Times.Once);
+            rawPinPadMock.Verify(x => x.SendRawMessageAsync(It.Is<RawRequestMessage>(
+                msg => msg.DataEquals(rawMsg)
+            )), Times.Once);
         }
     }
 }

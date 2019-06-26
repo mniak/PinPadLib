@@ -19,6 +19,14 @@ namespace PinPadLib.LowLevel
             Parameters = parameters;
         }
         public CommandName Command { get; }
-        public IEnumerable<string> Parameters { get; set; }
+        public IEnumerable<string> Parameters { get; }
+
+        public LowLevelRequestMessage With(CommandName? command = null, IEnumerable<string> parameters = null)
+        {
+            command = command ?? Command;
+            parameters = parameters ?? Parameters;
+
+            return new LowLevelRequestMessage(command.Value, parameters.ToArray());
+        }
     }
 }

@@ -1,9 +1,10 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-namespace PinPadLib.LowLevel.UnitTests._Infra
+namespace PinPadLib.Utils
 {
-    internal class ByteArrayBuilder
+    internal class ByteArrayBuilder : IEnumerable<byte>
     {
         private readonly List<byte> bytes;
 
@@ -28,9 +29,19 @@ namespace PinPadLib.LowLevel.UnitTests._Infra
             return this;
         }
 
+        public IEnumerator<byte> GetEnumerator()
+        {
+            return this.bytes.GetEnumerator();
+        }
+
         public byte[] ToArray()
         {
             return this.bytes.ToArray();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return this.bytes.GetEnumerator();
         }
     }
 }
