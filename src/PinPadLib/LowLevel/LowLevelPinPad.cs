@@ -21,6 +21,12 @@ namespace PinPadLib.LowLevel
 
         public Task SendCommandAsync(LowLevelRequestMessage message)
         {
+            var bytes = FormatMessage(ref message);
+            return this.rawPinPad.SendRawMessageAsync(bytes);
+        }
+
+        private static byte[] FormatMessage(ref LowLevelRequestMessage message)
+        {
             var bytes = new ByteArrayBuilder()
                 .Add(Bytes.SYN)
                 .Add(message.Command.acronym);
@@ -37,7 +43,7 @@ namespace PinPadLib.LowLevel
             bytes.Add(Bytes.ETB);
             var crc = Crc16.Compute(bytes.Skip(1));
             bytes.Add((byte)(crc / 256), (byte)(crc % 256));
-            return this.rawPinPad.SendRawMessageAsync(bytes.ToArray());
+            return bytes.ToArray();
         }
     }
 }

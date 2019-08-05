@@ -77,34 +77,5 @@
 
 //            return tmp.ToArray();
 //        }
-
-//        private byte[] CalcCrc16(IEnumerable<byte> data)
-//        {
-//            ushort CRC_MASK = 0x1021;
-//            ushort wCRC = 0;
-//            foreach (var b in data)
-//            {
-//                var wData = b << 8;
-//                for (byte i = 0; i < 8; i++)
-//                {
-//                    if (((wCRC ^ wData) & 0x8000) != 0)
-//                    {
-//                        wCRC <<= 1;
-//                        wCRC ^= CRC_MASK;
-//                    }
-//                    else
-//                    {
-//                        wCRC <<= 1;
-//                    }
-
-//                    wData <<= 1;
-//                }
-//            }
-//            var result = new byte[] {
-//                (byte)(wCRC / 256),
-//                (byte)(wCRC % 256),
-//            };
-//            return result;
-//        }
 //    }
 //}
