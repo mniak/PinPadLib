@@ -17,18 +17,26 @@ namespace PinPadLib.Raw.UnitTests
         [Fact]
         public void Dispose_ShouldNotDisposeStream()
         {
-            using (var stream = new DisposableStream())
+            using (var inputStream = new DisposableStream())
+            using (var outputStream = new DisposableStream())
             {
-                using (new StreamRawPinPad(stream)) { }
-                stream.WasDisposed.ShouldBeFalse();
+                StreamRawPinPad pinpad;
+                using (pinpad = new StreamRawPinPad(inputStream, outputStream))
+                {
+                    pinpad.pipeFillCancellation.IsCancellationRequested.ShouldBeFalse();
+                }
+                inputStream.WasDisposed.ShouldBeFalse();
+                outputStream.WasDisposed.ShouldBeFalse();
+                pinpad.pipeFillCancellation.IsCancellationRequested.ShouldBeTrue();
             }
         }
 
         [Fact]
         public void Send_WhenReceiveACK_ShouldStopSending()
         {
-            using (var stream = new RWStream())
-            using (var sut = new StreamRawPinPad(stream))
+            using (var inputStream = new RWStream(RWStream.Mode.Read))
+            using (var outputStream = new RWStream(RWStream.Mode.Write))
+            using (var sut = new StreamRawPinPad(inputStream, outputStream))
             {
                 var payload = Encoding.ASCII.GetBytes("OPN000");
                 var expectedBytes = new ByteArrayBuilder()
@@ -39,19 +47,20 @@ namespace PinPadLib.Raw.UnitTests
                 {
                     var taskSend = sut.SendRawMessageAsync(new RawRequestMessage(payload));
                     await Task.Delay(100);
-                    stream.PushByteToRead(Bytes.ACK);
+                    inputStream.PushByteToRead(Bytes.ACK);
                     await taskSend;
                 }, TimeSpan.FromMilliseconds(100 + ToleranceMilliseconds));
 
-                stream.GetBytesWritten().ShouldBe(expectedBytes);
+                outputStream.GetBytesWritten().ShouldBe(expectedBytes);
             }
         }
 
         [Fact]
         public void Send_WhenDoesNotReceiveReplyAndTimeout_ShouldAddCANandAbort()
         {
-            using (var stream = new RWStream())
-            using (var sut = new StreamRawPinPad(stream))
+            using (var inputStream = new RWStream(RWStream.Mode.Read))
+            using (var outputStream = new RWStream(RWStream.Mode.Write))
+            using (var sut = new StreamRawPinPad(inputStream, outputStream))
             {
                 var payload = Encoding.ASCII.GetBytes("OPN000");
                 var expectedBytes = new ByteArrayBuilder()
@@ -64,15 +73,16 @@ namespace PinPadLib.Raw.UnitTests
                     await sut.SendRawMessageAsync(new RawRequestMessage(payload));
                 }, TimeSpan.FromMilliseconds(TimeoutMilliseconds + ToleranceMilliseconds));
 
-                stream.GetBytesWritten().ShouldBe(expectedBytes);
+                outputStream.GetBytesWritten().ShouldBe(expectedBytes);
             }
         }
 
         [Fact]
         public void Send_WhenReceiveNAK_1stTime_ShouldTryAgain()
         {
-            using (var stream = new RWStream())
-            using (var sut = new StreamRawPinPad(stream))
+            using (var inputStream = new RWStream(RWStream.Mode.Read))
+            using (var outputStream = new RWStream(RWStream.Mode.Write))
+            using (var sut = new StreamRawPinPad(inputStream, outputStream))
             {
                 var payload = Encoding.ASCII.GetBytes("OPN000");
                 var expectedBytes = new ByteArrayBuilder()
@@ -85,19 +95,20 @@ namespace PinPadLib.Raw.UnitTests
                  {
                      var taskSend = sut.SendRawMessageAsync(new RawRequestMessage(payload));
                      await Task.Delay(100);
-                     stream.PushByteToRead(Bytes.NAK);
+                     inputStream.PushByteToRead(Bytes.NAK);
                      await taskSend;
                  }, TimeSpan.FromMilliseconds(100 + TimeoutMilliseconds + ToleranceMilliseconds));
 
-                stream.GetBytesWritten().ShouldBe(expectedBytes);
+                outputStream.GetBytesWritten().ShouldBe(expectedBytes);
             }
         }
 
         [Fact]
         public void Send_WhenReceiveNAK_2ndTime_ShouldTryAgain()
         {
-            using (var stream = new RWStream())
-            using (var sut = new StreamRawPinPad(stream))
+            using (var inputStream = new RWStream(RWStream.Mode.Read))
+            using (var outputStream = new RWStream(RWStream.Mode.Write))
+            using (var sut = new StreamRawPinPad(inputStream, outputStream))
             {
                 var payload = Encoding.ASCII.GetBytes("OPN000");
                 var expectedBytes = new ByteArrayBuilder()
@@ -111,21 +122,22 @@ namespace PinPadLib.Raw.UnitTests
                 {
                     var taskSend = sut.SendRawMessageAsync(new RawRequestMessage(payload));
                     await Task.Delay(100);
-                    stream.PushByteToRead(Bytes.NAK);
+                    inputStream.PushByteToRead(Bytes.NAK);
                     await Task.Delay(100);
-                    stream.PushByteToRead(Bytes.NAK);
+                    inputStream.PushByteToRead(Bytes.NAK);
                     await taskSend;
                 }, TimeSpan.FromMilliseconds(100 + 100 + TimeoutMilliseconds + ToleranceMilliseconds));
 
-                stream.GetBytesWritten().ShouldBe(expectedBytes);
+                outputStream.GetBytesWritten().ShouldBe(expectedBytes);
             }
         }
 
         [Fact]
         public void Send_WhenReceiveNAK_3rdTime_ShouldAddCANandAbort()
         {
-            using (var stream = new RWStream())
-            using (var sut = new StreamRawPinPad(stream))
+            using (var inputStream = new RWStream(RWStream.Mode.Read))
+            using (var outputStream = new RWStream(RWStream.Mode.Write))
+            using (var sut = new StreamRawPinPad(inputStream, outputStream))
             {
                 var payload = Encoding.ASCII.GetBytes("OPN000");
                 var expectedBytes = new ByteArrayBuilder()
@@ -139,18 +151,16 @@ namespace PinPadLib.Raw.UnitTests
                 {
                     var taskSend = sut.SendRawMessageAsync(new RawRequestMessage(payload));
                     await Task.Delay(100);
-                    stream.PushByteToRead(Bytes.NAK);
+                    inputStream.PushByteToRead(Bytes.NAK);
                     await Task.Delay(100);
-                    stream.PushByteToRead(Bytes.NAK);
+                    inputStream.PushByteToRead(Bytes.NAK);
                     await Task.Delay(100);
-                    stream.PushByteToRead(Bytes.NAK);
+                    inputStream.PushByteToRead(Bytes.NAK);
                     await taskSend;
                 }, TimeSpan.FromMilliseconds(100 + 100 + 100 + ToleranceMilliseconds));
 
-                stream.GetBytesWritten().ShouldBe(expectedBytes);
+                outputStream.GetBytesWritten().ShouldBe(expectedBytes);
             }
         }
-
-        public void Receive
     }
 }

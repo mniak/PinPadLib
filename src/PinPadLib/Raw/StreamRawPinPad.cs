@@ -11,25 +11,28 @@ namespace PinPadLib.Raw
     {
         private const int NumberOfAttempts = 3;
 
-        private readonly Stream stream;
-        private readonly Pipe pipe;
+        private readonly Stream outputStream;
+
+        private readonly Pipe inputPipe;
         private readonly PipeMessageReader msgReader;
-        private readonly CancellationTokenSource writeCancellation;
-        private readonly Task taskWrite;
+        internal readonly CancellationTokenSource pipeFillCancellation;
 
-        public StreamRawPinPad(Stream stream)
+        public StreamRawPinPad(Stream inputStream, Stream outputStream)
         {
-            this.stream = stream ?? throw new ArgumentNullException(nameof(stream));
-            this.pipe = new Pipe();
-            this.msgReader = new PipeMessageReader(this.pipe.Reader);
+            if (inputStream is null)
+                throw new ArgumentNullException(nameof(inputStream));
+            this.outputStream = outputStream ?? throw new ArgumentNullException(nameof(outputStream));
 
-            this.writeCancellation = new CancellationTokenSource();
-            this.taskWrite = KeepFillingTheInputPipe(stream, this.pipe.Writer, this.writeCancellation.Token);
+            this.inputPipe = new Pipe();
+            this.msgReader = new PipeMessageReader(this.inputPipe.Reader);
+
+            this.pipeFillCancellation = new CancellationTokenSource();
+            _ = KeepFillingTheInputPipe(inputStream, this.inputPipe.Writer, this.pipeFillCancellation.Token);
         }
 
         public void Dispose()
         {
-            this.writeCancellation.Cancel();
+            this.pipeFillCancellation.Cancel();
         }
 
         private async Task KeepFillingTheInputPipe(Stream stream, PipeWriter writer, CancellationToken cancellationToken)
@@ -50,7 +53,7 @@ namespace PinPadLib.Raw
             var bytes = rawMessage.RawBytesToSend();
             for (var i = 0; i < NumberOfAttempts; i++)
             {
-                await this.stream.WriteAsync(bytes, 0, bytes.Length);
+                await this.outputStream.WriteAsync(bytes, 0, bytes.Length);
                 var @int = await this.msgReader.ReadAckOrNakAsync();
                 switch (@int)
                 {
@@ -65,7 +68,7 @@ namespace PinPadLib.Raw
                 }
                 break;
             }
-            this.stream.Write(new[] { Bytes.CAN }, 0, 1);
+            this.outputStream.Write(new[] { Bytes.CAN }, 0, 1);
             return false;
         }
 

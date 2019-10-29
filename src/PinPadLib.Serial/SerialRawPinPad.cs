@@ -37,6 +37,7 @@
 
 //        public Task<RawResponseMessage> ReceiveRawMessageAsync()
 //        {
+//            this.serialPort.write
 //            this.serialPort.ReadExisting(
 //        }
 
