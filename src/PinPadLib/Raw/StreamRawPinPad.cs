@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PinPadLib.Utils;
+using System;
 using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
@@ -8,6 +9,8 @@ namespace PinPadLib.Raw
 {
     internal class StreamRawPinPad : IRawPinPad, IDisposable
     {
+        private const int NumberOfAttempts = 3;
+
         private readonly Stream stream;
         private readonly Pipe pipe;
         private readonly PipeMessageReader msgReader;
@@ -45,17 +48,31 @@ namespace PinPadLib.Raw
 
         public Task<RawResponseMessage> ReceiveRawMessageAsync()
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
-        public async Task SendRawMessageAsync(RawRequestMessage rawMessage)
+        public async Task<bool> SendRawMessageAsync(RawRequestMessage rawMessage)
         {
             var bytes = rawMessage.RawBytesToSend();
-            for (var i = 0; i < 3; i++)
+            for (var i = 0; i < NumberOfAttempts; i++)
             {
                 await this.stream.WriteAsync(bytes, 0, bytes.Length);
-                var isAck = await this.msgReader.ReadAckOrNakAsync();
+                var @int = await this.msgReader.ReadAckOrNakAsync();
+                switch (@int)
+                {
+                    case AcknowledgmentResponseInterruption.Acknowledgment:
+                        return true;
+                    case AcknowledgmentResponseInterruption.NegativeAcknowledgment:
+                        continue;
+
+                    default:
+                    case AcknowledgmentResponseInterruption.Abort:
+                        break;
+                }
+                break;
             }
+            this.stream.Write(new[] { Bytes.CAN }, 0, 1);
+            return false;
         }
     }
 }

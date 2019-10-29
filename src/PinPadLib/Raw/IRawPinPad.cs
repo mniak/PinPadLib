@@ -4,7 +4,7 @@ namespace PinPadLib.Raw
 {
     public interface IRawPinPad
     {
-        Task SendRawMessageAsync(RawRequestMessage rawMessage);
+        Task<bool> SendRawMessageAsync(RawRequestMessage rawMessage);
         Task<RawResponseMessage> ReceiveRawMessageAsync();
     }
 }
