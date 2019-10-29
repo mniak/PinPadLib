@@ -32,10 +32,7 @@ namespace PinPadLib.Raw.UnitTests
             {
                 var payload = Encoding.ASCII.GetBytes("OPN000");
                 var expectedBytes = new ByteArrayBuilder()
-                    .Add(Bytes.SYN)
-                    .Add(payload)
-                    .Add(Bytes.ETB)
-                    .Add(0x77, 0x5e)
+                    .Add(Bytes.SYN).Add(payload).Add(Bytes.ETB).Add(0x77, 0x5e)
                     .ToArray();
 
                 Should.CompleteIn(async () =>
@@ -51,7 +48,28 @@ namespace PinPadLib.Raw.UnitTests
         }
 
         [Fact]
-        public void Send_WhenReceiveNAKForTheFirstTime_ShouldTryAgain()
+        public void Send_WhenDoesNotReceiveReplyAndTimeout_ShouldAddCANandAbort()
+        {
+            using (var stream = new RWStream())
+            using (var sut = new StreamRawPinPad(stream))
+            {
+                var payload = Encoding.ASCII.GetBytes("OPN000");
+                var expectedBytes = new ByteArrayBuilder()
+                    .Add(Bytes.SYN).Add(payload).Add(Bytes.ETB).Add(0x77, 0x5e)
+                    .Add(Bytes.CAN)
+                    .ToArray();
+
+                Should.CompleteIn(async () =>
+                {
+                    await sut.SendRawMessageAsync(new RawRequestMessage(payload));
+                }, TimeSpan.FromMilliseconds(TimeoutMilliseconds + ToleranceMilliseconds));
+
+                stream.GetBytesWritten().ShouldBe(expectedBytes);
+            }
+        }
+
+        [Fact]
+        public void Send_WhenReceiveNAK_1stTime_ShouldTryAgain()
         {
             using (var stream = new RWStream())
             using (var sut = new StreamRawPinPad(stream))
@@ -76,7 +94,7 @@ namespace PinPadLib.Raw.UnitTests
         }
 
         [Fact]
-        public void Send_WhenReceiveNAKForTheSecondTime_ShouldTryAgain()
+        public void Send_WhenReceiveNAK_2ndTime_ShouldTryAgain()
         {
             using (var stream = new RWStream())
             using (var sut = new StreamRawPinPad(stream))
@@ -104,7 +122,7 @@ namespace PinPadLib.Raw.UnitTests
         }
 
         [Fact]
-        public void Send_WhenReceiveNAKForTheThirdTime_ShouldAddCanAndAbort()
+        public void Send_WhenReceiveNAK_3rdTime_ShouldAddCANandAbort()
         {
             using (var stream = new RWStream())
             using (var sut = new StreamRawPinPad(stream))
@@ -128,30 +146,6 @@ namespace PinPadLib.Raw.UnitTests
                     stream.PushByteToRead(Bytes.NAK);
                     await taskSend;
                 }, TimeSpan.FromMilliseconds(100 + 100 + 100 + ToleranceMilliseconds));
-
-                stream.GetBytesWritten().ShouldBe(expectedBytes);
-            }
-        }
-
-        [Fact]
-        public void Send_WhenDoesNotReceiveReplyAndTimeout_ShouldAddCanAndAbort()
-        {
-            using (var stream = new RWStream())
-            using (var sut = new StreamRawPinPad(stream))
-            {
-                var payload = Encoding.ASCII.GetBytes("OPN000");
-                var expectedBytes = new ByteArrayBuilder()
-                    .Add(Bytes.SYN)
-                    .Add(payload)
-                    .Add(Bytes.ETB)
-                    .Add(0x77, 0x5e)
-                    .Add(Bytes.CAN)
-                    .ToArray();
-
-                Should.CompleteIn(async () =>
-                {
-                    await sut.SendRawMessageAsync(new RawRequestMessage(payload));
-                }, TimeSpan.FromMilliseconds(TimeoutMilliseconds + ToleranceMilliseconds));
 
                 stream.GetBytesWritten().ShouldBe(expectedBytes);
             }
