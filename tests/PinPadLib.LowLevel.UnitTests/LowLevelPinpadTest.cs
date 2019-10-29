@@ -12,7 +12,7 @@ namespace PinPadLib.LowLevel.UnitTests
     {
         [Theory]
         [AutoMoqData]
-        public async Task WhenSendMessageWithOneEmptyParaqmeter_ShouldAdd000(
+        public async Task WhenSendMessageWithOneEmptyParameter_ShouldAdd000(
            [Frozen]Mock<IRawPinPad> rawPinPadMock,
            LowLevelPinPad sut)
         {
