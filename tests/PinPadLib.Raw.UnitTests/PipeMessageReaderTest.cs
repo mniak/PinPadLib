@@ -1,6 +1,6 @@
 using PinPadLib.Utils;
 using Shouldly;
-using System.IO.Pipelines;
+using System;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -11,16 +11,14 @@ namespace PinPadLib.Raw.UnitTests
         [Theory]
         [InlineData("OPN000", 0x77, 0x5e)]
         [InlineData("AAAAAAAA", 0x9a, 0x63)]
-        public async Task WhenReceiveWellFormattedMessage_ShouldReturnData(string payload, byte crcByte1, byte crcByte2)
+        public async Task ReadMessageAsync_WhenReceiveWellFormattedMessage_ShouldReturnData(string payload, byte crcByte1, byte crcByte2)
         {
-            var bytes = new ByteArrayBuilder();
-            bytes.Add(Bytes.SYN);
-            bytes.Add(payload);
-            bytes.Add(Bytes.ETB);
-            bytes.Add(crcByte1, crcByte2);
-
-            var pipe = new Pipe();
-            await pipe.Writer.WriteAsync(bytes.ToArray());
+            var pipe = await new ByteArrayBuilder()
+                .Add(Bytes.SYN)
+                .Add(payload)
+                .Add(Bytes.ETB)
+                .Add(crcByte1, crcByte2)
+                .BuildPipeAsync();
 
             var sut = new PipeMessageReader(pipe.Reader);
             var msg = await sut.ReadMessageAsync();
@@ -33,17 +31,15 @@ namespace PinPadLib.Raw.UnitTests
         [Theory]
         [InlineData("OPN000", 0x77, 0x5e)]
         [InlineData("AAAAAAAA", 0x9a, 0x63)]
-        public async Task WhenReceiveWellFormattedMessage_WithCANInTheBeginning_ShouldReturnData(string payload, byte crcByte1, byte crcByte2)
+        public async Task ReadMessageAsync_WhenReceiveWellFormattedMessage_WithCANInTheBeginning_ShouldReturnData(string payload, byte crcByte1, byte crcByte2)
         {
-            var bytes = new ByteArrayBuilder();
-            bytes.Add(Bytes.CAN);
-            bytes.Add(Bytes.SYN);
-            bytes.Add(payload);
-            bytes.Add(Bytes.ETB);
-            bytes.Add(crcByte1, crcByte2);
-
-            var pipe = new Pipe();
-            await pipe.Writer.WriteAsync(bytes.ToArray());
+            var pipe = await new ByteArrayBuilder()
+                .Add(Bytes.CAN)
+                .Add(Bytes.SYN)
+                .Add(payload)
+                .Add(Bytes.ETB)
+                .Add(crcByte1, crcByte2)
+                .BuildPipeAsync();
 
             var sut = new PipeMessageReader(pipe.Reader);
             var msg = await sut.ReadMessageAsync();
@@ -56,19 +52,17 @@ namespace PinPadLib.Raw.UnitTests
         [Theory]
         [InlineData("OPN000", 0x77, 0x5e)]
         [InlineData("AAAAAAAA", 0x9a, 0x63)]
-        public async Task WhenReceiveWellFormattedMessage_WithCANInTheMiddle_ShouldReturnData(string payload, byte crcByte1, byte crcByte2)
+        public async Task ReadMessageAsync_WhenReceiveWellFormattedMessage_WithCANInTheMiddle_ShouldReturnData(string payload, byte crcByte1, byte crcByte2)
         {
-            var bytes = new ByteArrayBuilder();
-            bytes.Add(Bytes.SYN);
-            bytes.Add("ABCDEFG");
-            bytes.Add(Bytes.CAN);
-            bytes.Add(Bytes.SYN);
-            bytes.Add(payload);
-            bytes.Add(Bytes.ETB);
-            bytes.Add(crcByte1, crcByte2);
-
-            var pipe = new Pipe();
-            await pipe.Writer.WriteAsync(bytes.ToArray());
+            var pipe = await new ByteArrayBuilder()
+                .Add(Bytes.SYN)
+                .Add("ABCDEFG")
+                .Add(Bytes.CAN)
+                .Add(Bytes.SYN)
+                .Add(payload)
+                .Add(Bytes.ETB)
+                .Add(crcByte1, crcByte2)
+                .BuildPipeAsync();
 
             var sut = new PipeMessageReader(pipe.Reader);
             var msg = await sut.ReadMessageAsync();
@@ -79,16 +73,14 @@ namespace PinPadLib.Raw.UnitTests
         }
 
         [Fact]
-        public async Task WhenReceiveWrongCRC_ShouldReturnInterruptionInvalidCrc()
+        public async Task ReadMessageAsync_WhenReceiveWrongCRC_ShouldReturnInterruptionInvalidCrc()
         {
-            var bytes = new ByteArrayBuilder();
-            bytes.Add(Bytes.SYN);
-            bytes.Add("ABCDEFG");
-            bytes.Add(Bytes.ETB);
-            bytes.Add(0x11, 0x22);
-
-            var pipe = new Pipe();
-            await pipe.Writer.WriteAsync(bytes.ToArray());
+            var pipe = await new ByteArrayBuilder()
+                .Add(Bytes.SYN)
+                .Add("ABCDEFG")
+                .Add(Bytes.ETB)
+                .Add(0x11, 0x22)
+                .BuildPipeAsync();
 
             var sut = new PipeMessageReader(pipe.Reader);
             var msg = await sut.ReadMessageAsync();
@@ -104,18 +96,16 @@ namespace PinPadLib.Raw.UnitTests
         [InlineData(0x90)]
         [InlineData(0xA0)]
         [InlineData(0xF0)]
-        public async Task WhenReceiveMessage_WithByteOutOfRange_ShouldReturnInterruptInvalidMessage(byte byteOutOfRange)
+        public async Task ReadMessageAsync_WhenReceiveMessage_WithByteOutOfRange_ShouldReturnInterruptInvalidMessage(byte byteOutOfRange)
         {
-            var bytes = new ByteArrayBuilder();
-            bytes.Add(Bytes.SYN);
-            bytes.Add("ABCD");
-            bytes.Add(byteOutOfRange);
-            bytes.Add("EFGH");
-            bytes.Add(Bytes.ETB);
-            bytes.Add(0x11, 0x22);
-
-            var pipe = new Pipe();
-            await pipe.Writer.WriteAsync(bytes.ToArray());
+            var pipe = await new ByteArrayBuilder()
+                .Add(Bytes.SYN)
+                .Add("ABCD")
+                .Add(byteOutOfRange)
+                .Add("EFGH")
+                .Add(Bytes.ETB)
+                .Add(0x11, 0x22)
+                .BuildPipeAsync();
 
             var sut = new PipeMessageReader(pipe.Reader);
             var msg = await sut.ReadMessageAsync();
@@ -125,15 +115,14 @@ namespace PinPadLib.Raw.UnitTests
         }
 
         [Fact]
-        public async Task WhenReceiveMessage_WithLengthGreaterThan1024_ShouldReturnInterruptInvalidMessage()
+        public async Task ReadMessageAsync_WhenReceiveMessage_WithLengthGreaterThan1024_ShouldReturnInterruptInvalidMessage()
         {
-            var bytes = new ByteArrayBuilder();
-            bytes.Add(Bytes.SYN);
-            bytes.Add(new string('a', 1025));
-            bytes.Add(Bytes.ETB);
-            bytes.Add(0x11, 0x22);
-            var pipe = new Pipe();
-            await pipe.Writer.WriteAsync(bytes.ToArray());
+            var pipe = await new ByteArrayBuilder()
+                .Add(Bytes.SYN)
+                .Add(new string('a', 1025))
+                .Add(Bytes.ETB)
+                .Add(0x11, 0x22)
+                .BuildPipeAsync();
 
             var sut = new PipeMessageReader(pipe.Reader);
             var msg = await sut.ReadMessageAsync();
@@ -148,21 +137,49 @@ namespace PinPadLib.Raw.UnitTests
         [InlineData(10)]
         [InlineData(102)]
         [InlineData(1024)]
-        public async Task WhenReceiveMessage_WithLengthAtMost1024_ShouldReturnInterruptInvalidCrcNotInvalidMessage(int length)
+        public async Task ReadMessageAsync_WhenReceiveMessage_WithLengthAtMost1024_ShouldReturnInterruptInvalidCrc(int length)
         {
-            var bytes = new ByteArrayBuilder();
-            bytes.Add(Bytes.SYN);
-            bytes.Add(new string('a', length));
-            bytes.Add(Bytes.ETB);
-            bytes.Add(0x11, 0x22);
-            var pipe = new Pipe();
-            await pipe.Writer.WriteAsync(bytes.ToArray());
+            var pipe = await new ByteArrayBuilder()
+                .Add(Bytes.SYN)
+                .Add(new string('a', length))
+                .Add(Bytes.ETB)
+                .Add(0x11, 0x22)
+                .BuildPipeAsync();
 
             var sut = new PipeMessageReader(pipe.Reader);
             var msg = await sut.ReadMessageAsync();
 
             var @int = msg.ShouldBeInterruption();
             @int.ShouldBe(ResponseInterruption.InvalidCrc);
+        }
+
+        [Theory]
+        [InlineData(Bytes.ACK, AcknowledgmentResponseInterruption.Acknowledgment)]
+        [InlineData(Bytes.NAK, AcknowledgmentResponseInterruption.NegativeAcknowledgment)]
+        [InlineData('A', AcknowledgmentResponseInterruption.Abort)]
+        [InlineData('1', AcknowledgmentResponseInterruption.Abort)]
+        [InlineData(Bytes.ETB, AcknowledgmentResponseInterruption.Abort)]
+        public async Task ReadAckOrNakAsync_WhenReceiveByte_ShouldReturnAccordingly(byte @byte, AcknowledgmentResponseInterruption expected)
+        {
+            var pipe = await new ByteArrayBuilder()
+                .Add(@byte)
+                .BuildPipeAsync();
+
+            var sut = new PipeMessageReader(pipe.Reader);
+            var @int = await sut.ReadAckOrNakAsync();
+
+            @int.ShouldBe(expected);
+        }
+
+        [Fact]
+        public async Task ReadAckOrNakAsync_WhenDoesNotReceiveByte_ShouldReturnAbort()
+        {
+            var pipe = await new ByteArrayBuilder().BuildPipeAsync();
+
+            var sut = new PipeMessageReader(pipe.Reader);
+            var @int = await sut.ReadAckOrNakAsync();
+
+            @int.ShouldBe(AcknowledgmentResponseInterruption.Abort);
         }
     }
 }

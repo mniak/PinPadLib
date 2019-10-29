@@ -47,6 +47,29 @@ namespace PinPadLib.Raw
             }
             return ResponseInterruption.InvalidMessage;
         }
+        public async Task<AcknowledgmentResponseInterruption> ReadAckOrNakAsync()
+        {
+            try
+            {
+                var result = await this.reader.ReadAsync(new CancellationTokenSource(DelayMs).Token);
+                ThrowIfHasCan(result);
+
+                var b0 = result.Buffer.Slice(0, 1).ToArray()[0];
+                this.reader.AdvanceTo(result.Buffer.GetPosition(1));
+                switch (b0)
+                {
+                    case Bytes.ACK:
+                        return AcknowledgmentResponseInterruption.Acknowledgment;
+                    case Bytes.NAK:
+                        return AcknowledgmentResponseInterruption.NegativeAcknowledgment;
+                }
+                return AcknowledgmentResponseInterruption.Abort;
+            }
+            catch (OperationCanceledException)
+            {
+                return AcknowledgmentResponseInterruption.Abort;
+            }
+        }
 
         private const byte ByteSyn = 0x16;
         private const byte ByteEtb = 0x17;
@@ -105,8 +128,8 @@ namespace PinPadLib.Raw
                 if (result.Buffer.Length >= 2)
                 {
                     var slice = result.Buffer.Slice(0, 2);
-                    this.reader.AdvanceTo(slice.End);
                     var bytes = slice.ToArray();
+                    this.reader.AdvanceTo(slice.End);
                     return (ushort)(bytes[0] * 256 + bytes[1]);
                 }
                 else
