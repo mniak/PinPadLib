@@ -24,10 +24,15 @@ namespace PinPadLib.Raw
             this.msgReader = new PipeMessageReader(this.pipe.Reader);
 
             this.writeCancellation = new CancellationTokenSource();
-            this.taskWrite = WriteToPipeAsync(stream, this.pipe.Writer, this.writeCancellation.Token);
+            this.taskWrite = KeepFillingTheInputPipe(stream, this.pipe.Writer, this.writeCancellation.Token);
         }
 
-        private async Task WriteToPipeAsync(Stream stream, PipeWriter writer, CancellationToken cancellationToken)
+        public void Dispose()
+        {
+            this.writeCancellation.Cancel();
+        }
+
+        private async Task KeepFillingTheInputPipe(Stream stream, PipeWriter writer, CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -40,17 +45,6 @@ namespace PinPadLib.Raw
             }
             writer.Complete();
         }
-
-        public void Dispose()
-        {
-            this.writeCancellation.Cancel();
-        }
-
-        public Task<RawResponseMessage> ReceiveRawMessageAsync()
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<bool> SendRawMessageAsync(RawRequestMessage rawMessage)
         {
             var bytes = rawMessage.RawBytesToSend();
@@ -73,6 +67,11 @@ namespace PinPadLib.Raw
             }
             this.stream.Write(new[] { Bytes.CAN }, 0, 1);
             return false;
+        }
+
+        public Task<RawResponseMessage> ReceiveRawMessageAsync()
+        {
+            throw new NotImplementedException();
         }
     }
 }

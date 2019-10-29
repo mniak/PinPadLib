@@ -150,5 +150,7 @@ namespace PinPadLib.Raw.UnitTests
                 stream.GetBytesWritten().ShouldBe(expectedBytes);
             }
         }
+
+        public void Receive
     }
 }
